@@ -182,3 +182,120 @@ CSP правити не треба: `default-src 'self'` покриває мед
 5. Прибрати `https://images.unsplash.com` з `img-src` у CSP (`vercel.json`).
 6. Якщо буде справжня пара before/after — прибрати фільтр `.ba-before`
    з `css/style.css`.
+
+---
+
+# Уточнені промпти для hero (після першої ітерації)
+
+Перша партія згенерованих кадрів показала три системні промахи:
+надто темна експозиція, авто по центру й на весь кадр, теплий блік
+замість бірюзового. Плюс захаращений фон, який моделі image-to-video
+розмивають у мазанину.
+
+## Кадр під відео
+
+```
+Cinematic automotive photograph of a matte-black luxury SUV (generic, unbranded)
+standing still inside a large empty detailing studio at night.
+
+COMPOSITION: wide shot. The car is placed in the RIGHT HALF of the frame, front
+three-quarter view angled toward the LEFT, front wheels turned slightly inward.
+The car occupies about 55% of the frame width — leave generous empty negative
+space on the left side, deep headroom above the roof, and clear polished floor
+in the foreground. Low camera height, at chest level. 16:9.
+
+LIGHT: bright luminous key light from the upper right creating one long unbroken
+specular highlight running the full length of the shoulder line. A cyan-teal rim
+light (#54D6E3) traces the roofline, windshield edge and front fender. Soft warm
+amber (#CBA35C) bounce fills the far side. Elevated mid-tones, gentle contrast —
+expose the frame ONE STOP BRIGHTER than a typical night studio shot, so the
+glossy paint reads as dark graphite grey rather than pure black.
+
+ENVIRONMENT: completely clean, empty, seamless dark backdrop. No equipment, no
+tools, no trolleys, no shelving, no cables, no hoses, no signage, no wall stains.
+Smooth polished concrete floor with a calm mirror reflection under the car. Thin
+even atmospheric haze catching the light beams.
+
+DETAILS: dark multi-spoke alloy wheels, clean glass, no brand badges, emblems or
+lettering anywhere on the car, no license plate, no people, no reflections of
+people.
+
+TECHNICAL: 35mm lens, f/5.6, sharp throughout, photorealistic, high dynamic
+range, natural colour.
+```
+
+Негативний промпт:
+
+```
+text, letters, logos, badges, emblems, watermark, license plate, people, human
+silhouette, studio equipment, tool trolley, cables, hoses, shelves, graffiti,
+posters, cluttered background, right-hand drive, deformed body panels, extra
+wheels, blown highlights, heavy vignette, motion blur, crushed blacks, car
+filling entire frame, tight crop
+```
+
+Ключові фрази, які лікують попередні промахи:
+`expose one stop brighter`, `right half of the frame`,
+`55% of the frame width`, `completely clean backdrop`.
+
+## Відео (image-to-video)
+
+Порожній простір ліворуч потрібен не тільки під заголовок — без нього
+камері нікуди рухатись, і проїзд зріже кузов.
+
+```
+The car is parked and completely static. Camera performs a very slow lateral
+dolly to the right, about 15 cm of travel across the whole shot, creating gentle
+parallax between the car and the background. The specular highlight glides
+slowly along the body line. Thin haze drifts softly to the left. The floor
+reflection shimmers subtly.
+
+The car itself does not move: wheels do not rotate, body does not shift or
+settle, doors and hood stay closed. No people enter the frame. No cuts, no zoom,
+no camera shake, no exposure changes. Locked-off cinematic look, 24fps.
+```
+
+Негатив:
+
+```
+wheels rotating, car driving, car moving, doors opening, hood opening, people
+walking in, camera orbit, rapid zoom, handheld shake, flicker, morphing body
+panels, warping reflections, appearing text or logos, scene change
+```
+
+Замовляти **5 секунд** — довші кліпи в i2v майже завжди «пливуть» до кінця.
+
+## Безшовний цикл: маятник
+
+Кліпи i2v практично ніколи не стикуються самі. Пряме відтворення + реверс
+дає ідеальний стик, і для плавного лінійного проїзду виглядає природно.
+З 5 секунд виходить 10-секундний цикл.
+
+```bash
+ffmpeg -i hero-raw.mp4 \
+  -filter_complex "[0:v]split[a][b];[b]reverse[r];[a][r]concat=n=2:v=1:a=0,fps=25,scale=1920:1080:flags=lanczos" \
+  -an -c:v libx264 -profile:v high -crf 26 -pix_fmt yuv420p -movflags +faststart \
+  public/video/hero-loop.mp4
+```
+
+```bash
+ffmpeg -i public/video/hero-loop.mp4 -an \
+  -c:v libvpx-vp9 -crf 34 -b:v 0 -row-mt 1 \
+  public/video/hero-loop.webm
+```
+
+`-an` прибирає аудіотрек повністю, `+faststart` дозволяє почати
+відтворення до повного завантаження файлу.
+
+## Порядок роботи
+
+1. Згенерувати кадр-кандидат.
+2. **Перед** генерацією відео перевірити його в реальному слоті —
+   з фільтрами й градієнтами, на десктопі та мобільному.
+3. Тільки після цього анімувати.
+
+Окреме рішення, яке треба ухвалити на цьому кроці: або кадр віддається
+світлішим, або в `css/style.css` послаблюється `brightness(0.55)` до
+приблизно `0.75` з компенсацією щільності градієнта під заголовком.
+Другий шлях зберігає згенеровану картинку як є, але це вже правка
+дизайну прототипу.
