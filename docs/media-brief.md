@@ -299,3 +299,96 @@ ffmpeg -i public/video/hero-loop.mp4 -an \
 приблизно `0.75` з компенсацією щільності градієнта під заголовком.
 Другий шлях зберігає згенеровану картинку як є, але це вже правка
 дизайну прототипу.
+
+---
+
+# Друга ітерація hero: заміряна ціль по експозиції
+
+Кадр з другої спроби (Dodge Durango, 1182×665) перевірено в реальному
+слоті — композиція влучна, але експозиції бракує.
+
+## Результати тест-фіту
+
+Композити лежать у `docs/preview/`:
+
+| Файл | Що показує |
+|---|---|
+| `hero-desktop-current.png` | поточний CSS — авто практично зникає |
+| `hero-desktop-soft.png` | той самий кадр із послабленим CSS — читається |
+| `hero-mobile-current.png` | мобільний кроп — видно саму решітку |
+| `hero-sharpness.png` | різкість: ×1.73 проти оригіналу 1:1 |
+| `hero-target-exposure.png` | кадр, підтягнутий до потрібної яскравості |
+| `hero-desktop-target-exposure.png` | він же під **незмінним** CSS — працює |
+
+## Заміряна ціль
+
+| Показник | Значення |
+|---|---|
+| Середня яскравість кадру зараз | 61.8 |
+| Потрібно | **92.3** |
+| Множник | **×1.49** |
+| В стопах | **+0.6** |
+| Апскейл на десктопі 1440 | ×1.73 (на 2560 — ×2.2) |
+
+Рішення: **CSS не чіпаємо**, кадр перегенеровуємо світлішим.
+`hero-target-exposure.png` можна давати генератору як референс стилю.
+
+## Промпт (третя ітерація)
+
+Три зміни проти попереднього:
+1. прибрано `near-black background #0D1014` — саме він тягнув кадр у темряву;
+   стіни мають бути **графітово-сірими**, темний фон сайту дає градієнт;
+2. верхнє світло стало головним героєм — ряди лінійних LED і, головне,
+   їхні **довгі паралельні відблиски по капоту й даху** (фірмовий кадр галузі);
+3. прямі вказівки на експозицію: підняті тіні, деталі в чорному кузові.
+
+```
+Photorealistic wide interior shot of a matte-black luxury SUV (generic, unbranded)
+parked inside a bright modern car detailing studio.
+
+LIGHTING — the main subject of this shot:
+The ceiling carries several rows of long linear LED tube fixtures running
+front-to-back, clearly visible in the upper part of the frame. Their reflections
+fall onto the car as LONG UNBROKEN PARALLEL LIGHT STREAKS gliding along the hood,
+the roof and the door panels — the classic gloss-check lighting of a professional
+detailing bay. Soft ambient fill bounces off the walls so shadows stay open and
+detailed. A thin cyan-teal edge highlight (#54D6E3) traces ONLY the roofline and
+the windshield frame — a light reflection, NOT a painted stripe on the hood.
+
+EXPOSURE: bright, well-lit scene. Shadows are LIFTED with clearly visible detail
+in the dark bodywork — no crushed blacks, no silhouette. The paint reads as dark
+graphite grey with strong specular highlights, not as pure black. The image should
+look noticeably brighter than a moody night studio shot.
+
+ENVIRONMENT: clean empty studio with dark CHARCOAL GREY walls (not black), gently
+lit by the ceiling fixtures. Polished light-grey epoxy floor with crisp mirror
+reflections of the car and of the ceiling lights. No equipment, no tools, no
+trolleys, no cables, no shelving, no signage. Very light atmospheric haze catching
+the beams.
+
+COMPOSITION: wide shot, car placed in the RIGHT HALF of the frame, front
+three-quarter view angled toward the LEFT, occupying about 55% of the frame width.
+Generous empty space on the left, headroom above the roof, clear floor in the
+foreground. Low camera height at chest level.
+
+DETAILS: dark multi-spoke alloy wheels, clean glass, no brand badges, emblems or
+lettering, no license plate, no people.
+
+TECHNICAL: 35mm lens, f/5.6, sharp throughout, high dynamic range, photorealistic
+automotive photography, 2560x1440, 16:9.
+```
+
+Негатив:
+
+```
+dark, underexposed, crushed blacks, silhouette, moody night scene, black walls,
+heavy vignette, text, letters, logos, badges, emblems, watermark, license plate,
+people, studio equipment, trolleys, cables, shelves, cluttered background,
+right-hand drive, deformed body panels, cyan stripe painted on hood, tight crop,
+car filling entire frame
+```
+
+## Стан у коді
+
+`index.html` уже вказує на `/public/images/hero.png` (кадр другої ітерації).
+Поки не приїде світліша версія, hero на сайті виглядає недоекспонованим.
