@@ -159,6 +159,68 @@
     }
   }
 
+  /* ---------- стрічка відгуків ----------
+     Дублюємо набір карток і зсуваємо трек рівно на ширину одного
+     набору — стик виходить безшовним. Швидкість задаємо в пікселях
+     за секунду, тож вона не залежить від кількості відгуків.
+     Стрічка їде і при prefers-reduced-motion — свідоме рішення
+     замовника; спосіб зупинити рух є (ховер, фокус, дотик).
+     Без JS лишається звичайний ряд для ручного гортання. */
+  const marquee = document.getElementById('testiMarquee');
+  const track = document.getElementById('testiTrack');
+
+  if (marquee && track) {
+    const SPEED = 55;                        // пікселів за секунду
+    const originals = Array.from(track.children);
+
+    const build = function () {
+      // прибираємо попередні клони перед перерахунком
+      Array.from(track.children).forEach(function (el) {
+        if (el.dataset.clone) track.removeChild(el);
+      });
+
+      const gap = parseFloat(getComputedStyle(track).gap) || 0;
+      let shift = 0;
+      originals.forEach(function (el) { shift += el.getBoundingClientRect().width + gap; });
+
+      // клон читається як дубль, тож ховаємо його від скрінрідерів
+      originals.forEach(function (el) {
+        const copy = el.cloneNode(true);
+        copy.dataset.clone = '1';
+        copy.setAttribute('aria-hidden', 'true');
+        track.appendChild(copy);
+      });
+
+      marquee.style.setProperty('--testi-shift', shift + 'px');
+      marquee.style.setProperty('--testi-duration', (shift / SPEED).toFixed(1) + 's');
+      marquee.classList.add('is-running');
+    };
+
+    build();
+
+    // ширина карток залежить від vw — перебудовуємо після зміни розміру
+    let resizeTimer;
+    window.addEventListener('resize', function () {
+      clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(build, 250);
+    });
+
+    // на тач-екранах немає ховера: пауза за дотиком
+    marquee.addEventListener('pointerdown', function () { marquee.classList.add('is-paused'); });
+    ['pointerup', 'pointercancel', 'pointerleave'].forEach(function (evt) {
+      marquee.addEventListener(evt, function () { marquee.classList.remove('is-paused'); });
+    });
+
+    // не крутимо, поки секція за екраном
+    if ('IntersectionObserver' in window) {
+      new IntersectionObserver(function (entries) {
+        entries.forEach(function (e) {
+          marquee.classList.toggle('is-paused', !e.isIntersecting);
+        });
+      }, { threshold: 0 }).observe(marquee);
+    }
+  }
+
   /* ---------- before / after slider ---------- */
   const baWrap = document.getElementById('baWrap');
   const baAfter = document.getElementById('baAfter');

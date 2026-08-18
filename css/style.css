@@ -300,7 +300,6 @@ section{position:relative;padding:140px 0;}
 .why-card p{color:var(--steel);font-size:14px;}
 
 /* ============ TESTIMONIALS ============ */
-.testi-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:22px;}
 .testi-card{padding:30px 28px;}
 .stars{color:var(--brass);font-size:14px;letter-spacing:2px;margin-bottom:18px;}
 .testi-card p{font-size:15px;color:var(--frost);line-height:1.65;}
@@ -369,7 +368,6 @@ footer{border-top:1px solid var(--glass-border);padding:70px 0 30px;position:rel
   .why-grid{grid-template-columns:repeat(2,1fr);}
   .matters-grid{grid-template-columns:repeat(2,1fr);}
   .trust-strip{grid-template-columns:repeat(2,1fr);}
-  .testi-grid{grid-template-columns:1fr;}
   .process-list{grid-template-columns:repeat(3,1fr);}
   .process-item{border-bottom:1px solid var(--glass-border);padding-bottom:26px;margin-bottom:6px;}
   .process-item:not(:last-child)::after{display:none;}
@@ -486,6 +484,65 @@ footer{border-top:1px solid var(--glass-border);padding:70px 0 30px;position:rel
   transform:translateY(-2px);
 }
 .media-toggle svg{width:12px;height:14px;fill:currentColor;display:block;}
+
+/* ---- стрічка відгуків ----
+   Дублікат набору карток створює JS, він же рахує зсув і тривалість,
+   щоб швидкість не залежала від кількості відгуків. Без JS лишається
+   звичайний ряд, який можна прогорнути пальцем або трекпадом. */
+.testi-marquee{
+  position:relative;
+  overflow-x:auto;
+  scrollbar-width:none;
+  -webkit-overflow-scrolling:touch;
+}
+.testi-marquee::-webkit-scrollbar{display:none;}
+.testi-track{
+  display:flex;
+  gap:22px;
+  width:max-content;
+  padding:2px;           /* щоб не зрізало рамку .glass */
+}
+.testi-track .testi-card{
+  flex:0 0 clamp(270px,26vw,340px);
+  display:flex;
+  flex-direction:column;
+}
+.testi-track .testi-card p{flex:1;}
+
+/* Режим автопрокрутки вмикає JS, коли дублікат уже на місці */
+.testi-marquee.is-running{
+  overflow:hidden;
+  -webkit-mask-image:linear-gradient(90deg,transparent 0,#000 72px,#000 calc(100% - 72px),transparent 100%);
+  mask-image:linear-gradient(90deg,transparent 0,#000 72px,#000 calc(100% - 72px),transparent 100%);
+}
+.testi-marquee.is-running .testi-track{
+  animation:testi-scroll var(--testi-duration,60s) linear infinite;
+}
+/* Пауза, щоб відгук можна було дочитати — мишею або з клавіатури */
+.testi-marquee.is-running:hover .testi-track,
+.testi-marquee.is-running:focus-within .testi-track,
+.testi-marquee.is-paused .testi-track{
+  animation-play-state:paused;
+}
+@keyframes testi-scroll{
+  from{transform:translateX(0);}
+  to{transform:translateX(calc(var(--testi-shift,50%) * -1));}
+}
+
+/* Виняток із загального правила вище (рядок ~406), де для prefers-reduced-motion
+   стоїть animation:none !important. Стрічка має їхати в усіх — так
+   вирішив замовник. Зупинити рух можна ховером, фокусом або дотиком.
+   Щоб повернути стандартну поведінку, достатньо видалити цей блок. */
+@media (prefers-reduced-motion: reduce){
+  .testi-marquee.is-running .testi-track{
+    animation:testi-scroll var(--testi-duration,60s) linear infinite !important;
+  }
+  .testi-marquee.is-running:hover .testi-track,
+  .testi-marquee.is-running:focus-within .testi-track,
+  .testi-marquee.is-paused .testi-track{
+    animation-play-state:paused !important;
+  }
+}
 
 /* ---- honeypot: приманка для ботів, для людини невидима ---- */
 .hp-field{
