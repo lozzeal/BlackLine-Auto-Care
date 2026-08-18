@@ -1,0 +1,20 @@
+# env
+.env
+.env.local
+.env.*.local
+
+# vercel
+.vercel
+
+# node
+node_modules/
+npm-debug.log*
+yarn-error.log*
+package-lock.json
+
+# os / editors
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+memory/

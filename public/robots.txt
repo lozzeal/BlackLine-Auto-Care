@@ -1,0 +1,5 @@
+User-agent: *
+Allow: /
+Disallow: /api/
+
+Sitemap: https://blackline-auto-care.vercel.app/sitemap.xml

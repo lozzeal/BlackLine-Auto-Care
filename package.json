@@ -1,0 +1,19 @@
+{
+  "name": "blackline-auto-care",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Сайт студії преміального автодетейлінгу BlackLine Auto Care (Київ) з формою заявки та сповіщеннями в Telegram",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev": "node scripts/dev-server.mjs",
+    "dev:vercel": "vercel dev",
+    "check": "node --check api/booking.js && node --check public/assets/js/ui.js && node --check public/assets/js/booking.js",
+    "deploy": "vercel --prod"
+  },
+  "devDependencies": {
+    "vercel": "^48.0.0"
+  }
+}
