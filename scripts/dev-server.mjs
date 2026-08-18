@@ -1,5 +1,5 @@
 /**
- * Локальний dev-сервер без залежностей: статика з public/ + функція /api/booking.
+ * Локальний dev-сервер без залежностей: статика з кореня + функція /api/submit-form.
  * Емулює те, що на проді робить Vercel.
  *
  *   node scripts/dev-server.mjs          → http://localhost:3000
@@ -14,7 +14,11 @@ import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 
 const root = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
-const publicDir = path.join(root, 'public');
+// Веб-корінь = корінь проєкту (як outputDirectory: "." на Vercel).
+const webRoot = root;
+// Службові теки та файли, які Vercel не деплоїть (.vercelignore) —
+// локально теж не віддаємо, щоб поведінка збігалась із продом.
+const HIDDEN = ['memory', 'docs', 'scripts', 'node_modules', 'README.md', '.env.example'];
 const port = Number((process.argv.find((a) => a.startsWith('--port=')) || '').split('=')[1]) || 3000;
 
 const MIME = {
@@ -42,10 +46,10 @@ try {
   }
   console.log('· підхоплено .env.local');
 } catch {
-  console.log('· .env.local не знайдено — /api/booking відповідатиме 503');
+  console.log('· .env.local не знайдено — /api/submit-form відповідатиме 503');
 }
 
-const { default: bookingHandler } = await import(new URL('../api/booking.js', import.meta.url));
+const { default: bookingHandler } = await import(new URL('../api/submit-form.js', import.meta.url));
 
 /** Додає до ServerResponse хелпери, які на Vercel є з коробки. */
 function enhance(res) {
@@ -63,13 +67,19 @@ async function serveStatic(req, res) {
   let pathname = decodeURIComponent(url.pathname);
   if (pathname.endsWith('/')) pathname += 'index.html';
 
+  const top = pathname.split('/').filter(Boolean)[0];
+  if (top && (HIDDEN.includes(top) || top.startsWith('.'))) {
+    res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' });
+    return res.end('Not found');
+  }
+
   // cleanUrls: /about → /about.html
   const candidates = [pathname];
   if (!path.extname(pathname)) candidates.push(pathname + '.html');
 
   for (const candidate of candidates) {
-    const filePath = path.join(publicDir, candidate);
-    if (!filePath.startsWith(publicDir)) break;   // захист від ../
+    const filePath = path.join(webRoot, candidate);
+    if (!filePath.startsWith(webRoot)) break;   // захист від ../
     try {
       const info = await stat(filePath);
       if (!info.isFile()) continue;
@@ -82,7 +92,7 @@ async function serveStatic(req, res) {
     } catch { /* пробуємо наступний варіант */ }
   }
 
-  const notFound = await readFile(path.join(publicDir, '404.html')).catch(() => 'Not found');
+  const notFound = await readFile(path.join(webRoot, '404.html')).catch(() => 'Not found');
   res.writeHead(404, { 'Content-Type': 'text/html; charset=utf-8' });
   res.end(notFound);
 }
@@ -94,7 +104,7 @@ createServer(async (req, res) => {
   });
 
   try {
-    if (req.url.split('?')[0] === '/api/booking') {
+    if (req.url.split('?')[0] === '/api/submit-form') {
       return await bookingHandler(req, enhance(res));
     }
     return await serveStatic(req, res);

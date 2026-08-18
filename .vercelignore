@@ -1,4 +1,15 @@
+# Веб-корінь тепер — корінь репозиторію (outputDirectory: "."),
+# тож усе, що тут НЕ виключено, стає публічно доступним за URL.
+# package.json НЕ виключаємо: з нього Vercel бере "type": "module",
+# без якого ESM-функція в api/ не запуститься.
+
 memory/
 docs/
+scripts/
+node_modules/
+
 README.md
 .env.example
+.gitignore
+.gitattributes
+.vercelignore

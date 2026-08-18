@@ -13,25 +13,45 @@
 
 ```
 blackline-auto-care/
-├─ public/                    ← статика, яку віддає Vercel
-│  ├─ index.html              головна сторінка
-│  ├─ 404.html
-│  ├─ favicon.svg
-│  ├─ robots.txt · sitemap.xml
-│  └─ assets/
-│     ├─ css/style.css        стилі (дизайн-токени + компоненти)
-│     └─ js/
-│        ├─ ui.js             хедер, меню, reveal, before/after слайдер
-│        └─ booking.js        валідація, стиснення фото, відправка форми
+├─ index.html               головна сторінка
+├─ 404.html
+├─ robots.txt · sitemap.xml
+├─ css/
+│  └─ style.css             дизайн-токени + усі компоненти
+├─ js/
+│  └─ main.js               1) UI  2) форма заявки
+├─ public/                  статичні ассети
+│  ├─ images/               реальні фото (зараз — заглушки з Unsplash)
+│  ├─ favicon.ico · favicon.svg
+│  └─ og-image.jpg          прев'ю для соцмереж і месенджерів
 ├─ api/
-│  └─ booking.js              Vercel Function: валідація + Telegram
+│  └─ submit-form.js        Vercel Function: валідація + Telegram
 ├─ scripts/
-│  └─ dev-server.mjs          локальний сервер без Vercel CLI
+│  └─ dev-server.mjs        локальний сервер без Vercel CLI
 ├─ docs/
-│  └─ prototype.html          вихідний односторінковий прототип
-├─ vercel.json                роутинг, заголовки безпеки, кешування
-└─ .env.example
+│  └─ prototype.html        вихідний односторінковий прототип
+├─ vercel.json              роутинг, заголовки безпеки, кешування
+├─ package.json             "type": "module" — потрібен для ESM у api/
+├─ .env.local               токени, у git не потрапляє
+├─ .env.example
+└─ README.md
 ```
+
+### Про веб-корінь
+
+`index.html` лежить у корені, тож у `vercel.json` явно задано
+`"outputDirectory": "."`. Це важливо: **за замовчуванням Vercel віддає теку
+`public/` як веб-корінь, якщо вона існує** — і головна сторінка просто не
+знайшлася б.
+
+Наслідок: публічно доступним стає весь корінь репозиторію, тому службові
+файли виключені через `.vercelignore` (`docs/`, `scripts/`, `memory/`,
+`README.md`, `.env.example`). `package.json` там залишено свідомо — Vercel
+бере з нього `"type": "module"`, без якого ESM-функція в `api/` не стартує.
+
+Тека `public/` віддається за буквальним шляхом — `/public/og-image.jpg`.
+Для звичних кореневих адрес `/favicon.ico` і `/og-image.jpg` у `vercel.json`
+налаштовані rewrites.
 
 ---
 
@@ -43,7 +63,7 @@ blackline-auto-care/
 валідація полів
 стиснення фото (canvas)
   2400×1800 → 1600px, JPEG
-POST /api/booking  ──────────►   honeypot + анти-бот
+POST /api/submit-form ───────►   honeypot + анти-бот
   JSON, фото в base64            валідація полів
                                  перевірка сигнатур файлів
                                  rate limit по IP
@@ -82,7 +102,7 @@ npm run dev
 ```
 
 Відкриє http://localhost:3000. Vercel CLI не потрібен — `scripts/dev-server.mjs`
-віддає статику й запускає ту саму функцію `api/booking.js`.
+віддає статику з кореня й запускає ту саму функцію `api/submit-form.js`.
 
 Без налаштованих змінних оточення форма чесно поверне `503` — так само, як
 поводився б прод. Щоб перевірити відправку в Telegram локально, створіть
@@ -134,8 +154,8 @@ vercel --prod
 Production / Preview / Development → зробити redeploy.
 
 Після деплою заміните домен у трьох місцях:
-`public/index.html` (canonical + og:url + JSON-LD), `public/robots.txt`,
-`public/sitemap.xml`.
+`index.html` (canonical + og:url + og:image + JSON-LD), `robots.txt`,
+`sitemap.xml`.
 
 ---
 
@@ -149,7 +169,7 @@ Production / Preview / Development → зробити redeploy.
 | Таймаут запиту | 30 с | `CONFIG.requestTimeoutMs` + `vercel.json` |
 | Rate limit | 5 / 10 хв на IP | `LIMITS.rateWindowMs` |
 
-`CONFIG` — у `public/assets/js/booking.js`, `LIMITS` — у `api/booking.js`.
+`CONFIG` — у `js/main.js`, `LIMITS` — у `api/submit-form.js`.
 Змінюючи ліміти фото, правте обидва файли.
 
 ---

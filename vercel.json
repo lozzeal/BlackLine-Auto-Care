@@ -1,13 +1,17 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "outputDirectory": "public",
+  "outputDirectory": ".",
   "cleanUrls": true,
   "trailingSlash": false,
   "functions": {
-    "api/booking.js": {
+    "api/submit-form.js": {
       "maxDuration": 30
     }
   },
+  "rewrites": [
+    { "source": "/favicon.ico", "destination": "/public/favicon.ico" },
+    { "source": "/og-image.jpg", "destination": "/public/og-image.jpg" }
+  ],
   "headers": [
     {
       "source": "/(.*)",
@@ -24,7 +28,7 @@
       ]
     },
     {
-      "source": "/assets/(.*)",
+      "source": "/(css|js|public)/(.*)",
       "headers": [
         { "key": "Cache-Control", "value": "public, max-age=3600, stale-while-revalidate=86400" }
       ]
