@@ -490,3 +490,123 @@ ffmpeg -i public/video/hero-loop.mp4 -an \
   -c:v libvpx-vp9 -crf 34 -b:v 0 -row-mt 1 \
   public/video/hero-loop.webm
 ```
+
+---
+
+# Промпти для решти зображень (фінальна редакція)
+
+Складено після досвіду з hero. Замінює ранні варіанти вище.
+
+## Уточнення по фільтрах
+
+Раніше в брифі було сказано, що CSS гасить усі фото — це неточно.
+Перевірено по кожному слоту:
+
+| Слот | Фільтр | Наслідок для генерації |
+|---|---|---|
+| Hero | `brightness(0.55) saturate(1.05)` | треба сильно світліше |
+| Booking | `brightness(0.65) saturate(1.05)` | треба світліше |
+| Картки послуг | `saturate(1.05) contrast(1.05)` | **яскравість не чіпається, знімати нормально** |
+| `.ba-after` | без фільтра | нормально |
+| `.ba-before` | `grayscale(0.9) brightness(0.6) contrast(0.9)` | прибрати, якщо буде справжня пара |
+
+## Before / After — крупний план капота
+
+Загальний план авто в слайдері не працює: різниці на дистанції не видно.
+Крупний план лаку показує саме те, за що платять.
+
+**Умова:** слайдер тримає два повнокадрові знімки ОДНОГО капота, а не
+один кадр, поділений навпіл. Рухається лише лінія розділу, тож файли
+мають збігатися попіксельно.
+
+### Крок 1 — `after` (16:9, далі обрізається до 2:1)
+
+```
+Photorealistic close-up of the hood and front fender of a black car, shot at a low
+oblique angle so the paint surface fills the entire frame.
+
+The paint is flawless: deep mirror-like gloss reflecting long parallel ceiling LED
+tubes as crisp unbroken lines with hard edges, like light on glass. Visible depth
+in the clear coat, wet-look richness.
+
+Bright modern detailing studio, dark charcoal grey surroundings, lifted shadows
+with clear detail. The hood surface fills the frame edge to edge — no sky, no
+background clutter, no horizon.
+
+No text, no badges, no emblems, no wipers, no people, no reflections of people.
+50mm, f/8, sharp throughout, high dynamic range.
+```
+
+### Крок 2 — `before` через Image-to-Image
+
+Вхід — щойно згенерований `after`. **Strength / denoise 0.35–0.45.**
+Вище — почне міняти ракурс.
+
+```
+The same hood, exactly the same camera angle, framing and light positions.
+The clear coat is now dull and hazy, covered in fine circular swirl marks and
+light scratches that scatter the light. Dried water spots and a layer of grey road
+dust. The ceiling light reflections are blurred, broken and diffused instead of
+sharp. Matte, lifeless surface.
+```
+
+Якщо i2i попливе — лишити тільки `after` і поточну схему з CSS-фільтром.
+
+**При отриманні справжньої пари прибрати фільтр `.ba-before`** з
+`css/style.css` — інакше він накладеться другим шаром на реальний бруд.
+
+## Картки послуг — 6 штук
+
+16:9 (обрізається до 2:1). Нижні 40% перекриває градієнт із ціною —
+сюжет у верхніх двох третинах.
+
+| Файл | Ядро промпту |
+|---|---|
+| `service-wash` | Gloved hands washing a black car door with a thick blanket of white snow foam sliding down the panel, foam lance mist in the air, water droplets caught in the light |
+| `service-polish` | A dual-action polisher with an orange foam pad on black paint. Ahead of the pad the surface is dull with fine swirl marks; behind it the paint is mirror gloss. A bright inspection lamp rakes across the surface revealing the contrast |
+| `service-ceramic` | A gloved hand applying ceramic coating with a suede applicator block onto black paint. The coated area has an iridescent wet sheen; tight round water beads sit on the finished section nearby |
+| `service-interior` | Steam and extraction cleaning of a grey leather car seat. A steam wand in a gloved hand, visible steam, clear contrast between the cleaned half of the bolster and the soiled half. Warm light through the car window |
+| `service-ppf` | An installer squeegeeing a transparent protective film onto a black car hood. The film edge is lifted and catches the light, showing its thickness. Spray bottle mist in the air, precision gloves |
+| `service-headlights` | Close-up of a restored LED headlight on a black car: crystal-clear lens, sharp internal reflectors, cyan-teal light bloom inside. A polished dark alloy wheel blurred behind |
+
+Спільний хвіст:
+
+```
+Bright modern detailing studio, dark charcoal grey background, rows of linear LED
+ceiling lights reflecting on glossy surfaces. Lifted shadows, clear detail in dark
+areas. Photorealistic, shallow depth of field, 50mm. Subject in the upper two
+thirds of the frame. No text, no logos, no badges, no license plates, no faces.
+```
+
+**Генерувати всі шість за один захід, підряд** — вони лежать поруч
+у сітці, різниця в колірній температурі там помітна найгостріше.
+
+## Booking
+
+Формат 3:4 (портрет). На десктопі слот вертикальний, на мобільному —
+горизонтальна смуга, тож сюжет строго по центру.
+
+```
+A detailing master in black uniform and black nitrile gloves inspecting a black
+car's paint with a handheld LED inspection torch. The beam rakes across the panel
+revealing gloss and fine detail. Three-quarter view from behind the person, face
+not visible.
+
+Bright modern detailing studio, dark charcoal grey walls, linear LED ceiling
+lights. Bright, well-lit scene with lifted shadows — no crushed blacks.
+
+VERTICAL composition. The person and the car panel are CENTERED with generous
+space above and below, so the frame survives being cropped both to a tall portrait
+and to a wide banner.
+
+No text, no logos, no badges, no license plate, no visible face.
+50mm, f/2.8, photorealistic.
+```
+
+## Конвеєр обробки
+
+1. Згенерувати в Leonardo (Styles → Clear all).
+2. Прогнати через AI-апскейлер ×3 — як робили з hero.
+3. Передати файли: конвертація у WebP, підключення, виправлення
+   `width`/`height`, зняття фільтра `.ba-before` за наявності пари,
+   видалення `images.unsplash.com` із CSP у `vercel.json`.
