@@ -72,6 +72,44 @@
     revealEls.forEach(function (el) { io.observe(el); });
   }
 
+  /* ---------- відео-фон hero ----------
+     Створюємо елемент з JS, а не в розмітці: так мобільні пристрої
+     не качають кліп узагалі. Поки відео не почалось — видно постер
+     із <picture>, це той самий кадр, тож підміна непомітна. */
+  const heroBg = document.querySelector('.hero-bg');
+  const wideEnough = window.matchMedia('(min-width: 761px)').matches;
+
+  if (heroBg && wideEnough && !reduceMotion) {
+    const video = document.createElement('video');
+    video.muted = true;
+    video.loop = true;
+    video.autoplay = true;
+    video.playsInline = true;
+    video.preload = 'auto';
+    video.setAttribute('aria-hidden', 'true');
+    video.tabIndex = -1;
+
+    [['/public/video/hero-loop.webm', 'video/webm'],
+     ['/public/video/hero-loop.mp4', 'video/mp4']].forEach(function (pair) {
+      const source = document.createElement('source');
+      source.src = pair[0];
+      source.type = pair[1];
+      video.appendChild(source);
+    });
+
+    heroBg.insertBefore(video, heroBg.querySelector('.hexfield'));
+    // Автоплей можуть заблокувати — тоді просто лишається постер.
+    const play = function () { const p = video.play(); if (p) p.catch(function () {}); };
+    play();
+
+    // Не крутимо кадри, коли hero поза екраном.
+    if ('IntersectionObserver' in window) {
+      new IntersectionObserver(function (entries) {
+        entries.forEach(function (e) { e.isIntersecting ? play() : video.pause(); });
+      }, { threshold: 0.05 }).observe(heroBg);
+    }
+  }
+
   /* ---------- before / after slider ---------- */
   const baWrap = document.getElementById('baWrap');
   const baAfter = document.getElementById('baAfter');

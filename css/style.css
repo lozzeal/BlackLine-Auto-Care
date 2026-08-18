@@ -437,6 +437,16 @@ footer{border-top:1px solid var(--glass-border);padding:70px 0 30px;position:rel
    інакше вкладений img не отримає висоту контейнера */
 .hero-bg picture{display:block;width:100%;height:100%;}
 
+/* Відео-фон лягає поверх постера й повторює його фільтри —
+   інакше при старті кліпу яскравість стрибне. Градієнти
+   .hero-bg::after малюються після нього, тож лишаються зверху. */
+.hero-bg video{
+  position:absolute;inset:0;
+  width:100%;height:100%;
+  object-fit:cover;
+  filter:brightness(0.55) saturate(1.05);
+}
+
 /* ---- honeypot: приманка для ботів, для людини невидима ---- */
 .hp-field{
   position:absolute;left:-9999px;top:auto;
