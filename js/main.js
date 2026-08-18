@@ -171,7 +171,8 @@
 
     const setPos = function (x) {
       pos = Math.max(0, Math.min(100, x));
-      baAfter.style.clipPath = 'inset(0 ' + (100 - pos) + '% 0 0)';
+      // обрізаємо зліва: «після» лишається праворуч від дільника
+      baAfter.style.clipPath = 'inset(0 0 0 ' + pos + '%)';
       baDivider.style.left = pos + '%';
       baHandle.style.left = pos + '%';
       baHandle.setAttribute('aria-valuenow', String(Math.round(pos)));
