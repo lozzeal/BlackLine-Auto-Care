@@ -279,7 +279,10 @@ section{position:relative;padding:140px 0;}
 .process-item{padding:32px 20px 0 0;border-right:1px solid var(--glass-border);position:relative;}
 .process-item:last-child{border-right:none;}
 .process-item:not(:last-child)::after{
-  content:'→';position:absolute;top:44px;right:-13px;color:var(--cyan);
+  /* top був 44px — це рівень шестикутника наступної колонки, а що
+     лівого padding у колонок немає, стрілка лягала просто на нього.
+     Смуга 0–32px (padding-top) порожня в усіх колонках — переносимо туди. */
+  content:'→';position:absolute;top:6px;right:-13px;color:var(--cyan);
   font-family:'JetBrains Mono',monospace;font-size:16px;z-index:2;
 }
 .process-icon{width:32px;height:32px;background:var(--cyan-dim);clip-path:var(--hex-clip);display:flex;align-items:center;justify-content:center;margin-bottom:16px;}
