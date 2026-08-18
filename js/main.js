@@ -77,13 +77,9 @@
      не качають кліп узагалі. Поки відео не почалось — видно постер
      із <picture>, це той самий кадр, тож підміна непомітна. */
   const heroBg = document.querySelector('.hero-bg');
-  const wideEnough = window.matchMedia('(min-width: 761px)').matches;
+  const wideQuery = window.matchMedia('(min-width: 761px)');
 
-  if (!heroBg) {
-    /* нічого */
-  } else if (!wideEnough) {
-    console.info('[hero] відео пропущено: екран вужчий за 761px — щоб не витрачати мобільний трафік');
-  } else {
+  const mountHeroVideo = function () {
     const video = document.createElement('video');
     video.muted = true;
     video.loop = true;
@@ -156,6 +152,22 @@
           else video.pause();
         });
       }, { threshold: 0.05 }).observe(heroBg);
+    }
+  };
+
+  if (heroBg) {
+    if (wideQuery.matches) {
+      mountHeroVideo();
+    } else {
+      console.info('[hero] відео пропущено: екран вужчий за 761px — щоб не витрачати мобільний трафік');
+      // Якщо вузьке вікно згодом розгорнуть — підключаємо відео тоді,
+      // інакше воно не зʼявилось би до перезавантаження сторінки.
+      const onWide = function (e) {
+        if (!e.matches || heroBg.querySelector('video')) return;
+        wideQuery.removeEventListener('change', onWide);
+        mountHeroVideo();
+      };
+      wideQuery.addEventListener('change', onWide);
     }
   }
 
