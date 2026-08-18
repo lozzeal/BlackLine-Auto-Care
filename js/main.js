@@ -79,7 +79,11 @@
   const heroBg = document.querySelector('.hero-bg');
   const wideEnough = window.matchMedia('(min-width: 761px)').matches;
 
-  if (heroBg && wideEnough && !reduceMotion) {
+  if (!heroBg) {
+    /* нічого */
+  } else if (!wideEnough) {
+    console.info('[hero] відео пропущено: екран вужчий за 761px — щоб не витрачати мобільний трафік');
+  } else {
     const video = document.createElement('video');
     video.muted = true;
     video.loop = true;
@@ -98,14 +102,59 @@
     });
 
     heroBg.insertBefore(video, heroBg.querySelector('.hexfield'));
-    // Автоплей можуть заблокувати — тоді просто лишається постер.
-    const play = function () { const p = video.play(); if (p) p.catch(function () {}); };
-    play();
 
-    // Не крутимо кадри, коли hero поза екраном.
+    /* Кнопка паузи — обовʼязкова: рух триває довше за 5 секунд,
+       і WCAG 2.2.2 вимагає спосіб його зупинити. Створюємо її разом
+       з відео, щоб без JS не лишалось мертвого елемента. */
+    const ICON = {
+      pause: '<svg viewBox="0 0 12 14" aria-hidden="true"><rect x="0" y="0" width="4" height="14" rx="1"/><rect x="8" y="0" width="4" height="14" rx="1"/></svg>',
+      play:  '<svg viewBox="0 0 12 14" aria-hidden="true"><path d="M1 1.2v11.6a1 1 0 0 0 1.5.87l9.2-5.8a1 1 0 0 0 0-1.74L2.5.33A1 1 0 0 0 1 1.2z"/></svg>'
+    };
+
+    const toggle = document.createElement('button');
+    toggle.type = 'button';
+    toggle.className = 'media-toggle';
+
+    const stats = document.querySelector('.hero-stats');
+    if (stats && stats.parentNode) {
+      stats.parentNode.classList.add('hero-stats-wrap');
+      stats.parentNode.appendChild(toggle);
+    }
+
+    let userPaused = false;
+
+    const paint = function () {
+      const playing = !video.paused;
+      toggle.innerHTML = playing ? ICON.pause : ICON.play;
+      toggle.setAttribute('aria-label', playing ? 'Зупинити фонове відео' : 'Відтворити фонове відео');
+      toggle.setAttribute('aria-pressed', String(!playing));
+    };
+
+    // Автоплей можуть заблокувати — тоді лишається постер, а кнопка покаже «play».
+    const play = function () {
+      const p = video.play();
+      if (p) p.then(paint).catch(paint); else paint();
+    };
+
+    toggle.addEventListener('click', function () {
+      userPaused = !video.paused;
+      userPaused ? video.pause() : play();
+      paint();
+    });
+
+    video.addEventListener('play', paint);
+    video.addEventListener('pause', paint);
+
+    play();
+    paint();
+
+    // Не крутимо кадри, коли hero поза екраном — але не скасовуємо вибір користувача.
     if ('IntersectionObserver' in window) {
       new IntersectionObserver(function (entries) {
-        entries.forEach(function (e) { e.isIntersecting ? play() : video.pause(); });
+        entries.forEach(function (e) {
+          if (e.isIntersecting) { if (!userPaused) play(); }
+          else video.pause();
+        });
       }, { threshold: 0.05 }).observe(heroBg);
     }
   }

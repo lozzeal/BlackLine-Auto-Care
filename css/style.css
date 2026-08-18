@@ -447,6 +447,34 @@ footer{border-top:1px solid var(--glass-border);padding:70px 0 30px;position:rel
   filter:brightness(0.55) saturate(1.05);
 }
 
+/* Кнопка паузи відео. Позиціонується від плашки статистики й винесена
+   з потоку — інакше зсунула б увесь блок, бо в плашки margin-top:-64px. */
+.hero-stats-wrap{position:relative;}
+.media-toggle{
+  position:absolute;
+  /* right — по внутрішньому краю контейнера, як у плашки */
+  right:clamp(20px,4vw,64px);
+  /* 64px компенсують margin-top:-64px плашки, 14px — зазор над нею */
+  bottom:calc(100% + 78px);
+  z-index:3;
+  width:40px;height:40px;
+  border-radius:50%;
+  background:var(--glass);
+  border:1px solid var(--glass-border);
+  backdrop-filter:blur(22px);
+  -webkit-backdrop-filter:blur(22px);
+  color:var(--frost);
+  display:flex;align-items:center;justify-content:center;
+  transition:border-color .2s, background .2s, transform .2s, color .2s;
+}
+.media-toggle:hover{
+  border-color:var(--cyan);
+  background:var(--cyan-dim);
+  color:var(--cyan);
+  transform:translateY(-2px);
+}
+.media-toggle svg{width:12px;height:14px;fill:currentColor;display:block;}
+
 /* ---- honeypot: приманка для ботів, для людини невидима ---- */
 .hp-field{
   position:absolute;left:-9999px;top:auto;
