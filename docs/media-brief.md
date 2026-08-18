@@ -392,3 +392,101 @@ car filling entire frame
 
 `index.html` уже вказує на `/public/images/hero.png` (кадр другої ітерації).
 Поки не приїде світліша версія, hero на сайті виглядає недоекспонованим.
+
+---
+
+# Промпт для відео під фінальний hero-кадр
+
+Складено під конкретне фото `public/images/hero.webp` (2560×1429).
+
+Два обмеження, які визначили рішення:
+
+1. **Повторювані патерни.** У кадрі ряди стельових ламп і грати решітки
+   Dodge — саме такі структури i2v-моделі найчастіше перемальовують і
+   «пливуть». Їхню стабільність прописано явно.
+2. **Композиція без запасу.** Авто в правій половині, задок уже зрізаний
+   краєм кадру. Боковий проїзд або заведе його під заголовок, або виштовхне
+   за межі. Тому не проїзд, а майже непомітний наїзд.
+
+## Промпт
+
+```
+A parked matte-black SUV inside a bright detailing studio. The car is completely
+static — it does not move, roll, or settle.
+
+MOTION:
+The camera performs an extremely slow, smooth dolly push-in toward the car — no
+more than a 5% change in framing across the entire clip. As the camera creeps
+forward, the long parallel reflections of the ceiling LED tubes glide slowly and
+continuously along the hood, the roof and the door panels, revealing the depth of
+the gloss. Thin atmospheric haze drifts gently to the left. The floor reflection
+shimmers faintly beneath the car.
+
+STABILITY:
+Constant exposure and constant colour throughout — the shot must not get darker
+or brighter over time. No fade in, no fade out. The ceiling light fixtures keep
+their exact number, spacing and shape. The grille slats keep their exact pattern.
+The wheels do not rotate. Doors, hood and mirrors stay closed and fixed. No
+people, no reflections of people. No cuts, no camera shake, no zoom snaps.
+
+Locked-off cinematic automotive commercial, photorealistic, 24fps.
+```
+
+Негатив:
+
+```
+wheels rotating, car driving, car rolling, car moving, doors opening, hood
+opening, people, human silhouette, camera orbit, camera shake, handheld, fast
+zoom, whip pan, scene change, cut, flicker, exposure shift, darkening, fade to
+black, morphing ceiling lights, changing number of lights, warping grille,
+melting reflections, deforming body panels, appearing text, logos, watermark,
+license plate
+```
+
+## Налаштування
+
+| Параметр | Значення |
+|---|---|
+| Вхідне зображення | `public/images/hero.webp` (2560×1429) |
+| Тривалість | 5 секунд |
+| Motion strength | **низький, 2–3 з 10** — вирішує більше за сам промпт |
+| FPS | 24 |
+| Звук | не потрібен |
+
+## Чек-лист приймання дубля
+
+Робити 2–3 генерації, i2v — лотерея. Перевіряти по черзі:
+
+1. стельові лампи — чи не змінюється кількість і нахил до кінця кліпу;
+2. решітка — чи не пливуть грати;
+3. колеса — чи не почали обертатися;
+4. яскравість — чи не темнішає кадр (це вб'є його під `brightness(0.55)`);
+5. задок — чи не виповз за правий край сильніше, ніж на старті.
+
+Запасний варіант, якщо наїзд завеликий: прибрати блок про dolly і лишити
+саму рухому світлотінь — камера нерухома, ковзають лише відблиски й серпанок.
+Для фону під заголовком достатньо, ризик артефактів майже нульовий.
+
+## Роздільність відео
+
+Тут вимоги нижчі, ніж до фото: рух маскує мʼякість значно краще за статику,
+а перший кадр до завантаження відео — це `poster`, тобто різкий 2560×1429.
+1280×720 з генератора цілком прийнятно.
+
+## Збірка циклу
+
+Маятник для наїзду працює особливо добре: пряме відтворення плюс реверс
+дають повільне «дихання» замість стрибка на стику.
+
+```bash
+ffmpeg -i hero-raw.mp4 \
+  -filter_complex "[0:v]split[a][b];[b]reverse[r];[a][r]concat=n=2:v=1:a=0,fps=25,scale=1920:1080:flags=lanczos" \
+  -an -c:v libx264 -profile:v high -crf 26 -pix_fmt yuv420p -movflags +faststart \
+  public/video/hero-loop.mp4
+```
+
+```bash
+ffmpeg -i public/video/hero-loop.mp4 -an \
+  -c:v libvpx-vp9 -crf 34 -b:v 0 -row-mt 1 \
+  public/video/hero-loop.webm
+```
