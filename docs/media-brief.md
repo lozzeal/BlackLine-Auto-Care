@@ -720,3 +720,94 @@ const smoother = u => u*u*u*(u*(u*6-15)+10);   // пік похідної 1.875
 const E = Math.round(LAST * 1.875 / 5);         // 180 кадрів = 7.5 с на прохід
 const H = 24;                                    // жорстка пауза 1.71 с
 ```
+
+---
+
+# Відео v2: амбієнтний рух замість руху камери
+
+Після трьох ітерацій пост-обробки стало ясно, що проблема нерозв'язна
+на монтажі. Фіксую висновок, щоб не ходити тим колом удруге.
+
+## Чому маятник приречений
+
+Будь-який розворот односпрямованого руху камери читається як зупинка.
+Пом'якшення кривої лише переносить проблему:
+
+| Крива | Пік похідної | Зона гальмування | Відчуття |
+|---|---|---|---|
+| без згладжування | — | 0 с | удар |
+| `smoothstep` | 1.5 | ~2.5 с із 6 с проходу | помітно |
+| `smootherstep` | 1.875 | **1.9 с із 7.5 с** | різкіше за smoothstep |
+
+Контрінтуїтивне: `smootherstep` математично м'якша на самому кінці
+(нульова друга похідна), але щоб пройти ту саму відстань, вона мусить
+швидше їхати в середині й **стискає зону гальмування**. Суб'єктивно
+виходить різкіше.
+
+Розтягувати гальмування можна лише подовжуючи цикл — 17 с уже було
+замало, наступний крок дав би 25-30 с.
+
+### Перевірена й відкинута гіпотеза
+
+Припускав, що причина в blend-інтерполяції: змішані кадри м'якші за
+оригінальні, і повернення різкості на паузі читається як клац. Заміряв
+енергію країв — на гальмуванні 1.27–1.30, на паузі 1.31. Різниця
+0.6–2.4%, замало. **Гіпотеза хибна**, причина суто в кривій.
+
+## Рішення: прибрати рух камери
+
+Якщо рухається лише повітря й світло — немає напрямку, отже немає ні
+гальмування, ні розвороту. Цикл збирається крос-фейдом: останні 1.5 с
+зливаються з першими, реверсу немає взагалі.
+
+### Промпт
+
+```
+[Static shot] A matte-black SUV stands completely still inside a bright detailing
+studio. The camera does not move at all — it is locked on a tripod, no push-in,
+no dolly, no pan, no zoom.
+
+Only light and air move. The long reflections of the ceiling LED tubes drift very
+slowly along the hood and the roof. A thin veil of haze floats gently through the
+light beams. The reflection on the polished floor shimmers faintly. Overall
+brightness stays exactly the same from the first frame to the last.
+
+The car is parked and inert: wheels do not rotate, the body does not shift or
+settle, doors and hood stay closed. The ceiling light fixtures keep their exact
+number, spacing and angle throughout. The grille keeps its exact pattern. No people
+appear, no reflections of people.
+
+Locked-off cinematic automotive commercial, photorealistic, 24fps.
+```
+
+### Налаштування Leonardo
+
+| Параметр | Значення |
+|---|---|
+| Режим | **Image-to-Video**, вхід `public/images/hero.webp` |
+| Styles | **Clear all** |
+| Duration | 10 с |
+| Dimensions | 16:9 |
+| Quality | 1376×768 |
+| Motion strength | **1–2 з 10** |
+
+### Збірка крос-фейдом (замість маятника)
+
+```bash
+# 10с кліп -> 8.5с безшовний цикл: хвіст зливається з головою
+ffmpeg -i raw.mp4 -filter_complex "\
+[0:v]trim=0:8.5,setpts=PTS-STARTPTS[main];\
+[0:v]trim=8.5:10,setpts=PTS-STARTPTS,format=yuva420p,\
+     fade=t=out:st=0:d=1.5:alpha=1[tail];\
+[main][tail]overlay=shortest=1,fps=24" \
+  -an -c:v libx264 -profile:v high -preset slow -crf 26 \
+  -pix_fmt yuv420p -movflags +faststart hero-loop.mp4
+```
+
+### Чек-лист приймання
+
+1. **Яскравість першого проти останнього кадру.** Минулий кліп потемнів
+   на 9.8%, довелося відрізати третину. Поверх лягає `brightness(0.55)`.
+2. Камера не поїхала (зривається при motion strength вище 2).
+3. Кількість і нахил стельових ламп не змінились.
+4. Грати решітки не попливли.
